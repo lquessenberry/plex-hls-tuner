@@ -59,7 +59,8 @@ This project combines:
 - [x] Write this plan
 - [ ] Fork / vendor plex-dvr-hls code as base
 - [ ] Set up project structure
-- [ ] Basic README and license
+- [x] Basic README and license
+- [ ] Add Dockerfile + docker-compose.yml
 
 ### Phase 1 – Core Companion (MVP Backend)
 **Target: Working HDHomeRun spoofer with dynamic channels**
@@ -73,7 +74,7 @@ This project combines:
 - [ ] Support injecting custom headers / cookies into ffmpeg
 - [ ] Persist channels to disk (JSON or SQLite)
 - [ ] Keep original plex-dvr-hls features (encoder profiles, device_id, XMLTV)
-- [ ] Docker + docker-compose ready
+- [ ] Docker + docker-compose ready (with multi-arch support)
 - [ ] Health check endpoint
 
 **Success criteria**: Manually add an HLS URL via API → appears in Plex Live TV within seconds.
@@ -147,7 +148,7 @@ plex-hls-tuner/
 │   ├── api/                ← new REST endpoints
 │   ├── config/
 │   ├── templates/
-│   ├── Dockerfile
+│   ├── Dockerfile          ← multi-stage Go + ffmpeg
 │   └── ...
 ├── extension/              ← Chrome extension
 │   ├── manifest.json
@@ -159,7 +160,71 @@ plex-hls-tuner/
 │   ├── api.md
 │   └── development.md
 ├── docker-compose.yml
+├── Dockerfile              ← (optional root-level for convenience)
 └── .github/workflows/
+```
+
+---
+
+## Dockerfile (Planned)
+
+We will provide a production-ready multi-stage Dockerfile for the companion:
+
+```dockerfile
+# Stage 1: Build the Go binary
+FROM golang:1.23-bookworm AS builder
+
+WORKDIR /app
+COPY companion/go.mod companion/go.sum ./
+RUN go mod download
+
+COPY companion/ .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /plex-hls-tuner ./cmd/main.go
+
+# Stage 2: Runtime with ffmpeg
+FROM debian:bookworm-slim
+
+# Install ffmpeg and minimal deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy binary and required templates/config
+COPY --from=builder /plex-hls-tuner /app/plex-hls-tuner
+COPY companion/templates/ /app/templates/
+COPY companion/config.example.json /app/config.json
+COPY companion/channels.example.json /app/channels.json
+
+# Expose HDHomeRun port + optional API port
+EXPOSE 5004 8080
+
+# Default command
+CMD ["/app/plex-hls-tuner"]
+```
+
+### docker-compose.yml (example)
+
+```yaml
+services:
+  plex-hls-tuner:
+    build: .
+    image: plex-hls-tuner:latest
+    container_name: plex-hls-tuner
+    ports:
+      - "5004:5004"   # HDHomeRun emulator (Plex)
+      - "8080:8080"   # REST API (extension + management)
+    volumes:
+      - ./data/config.json:/app/config.json
+      - ./data/channels.json:/app/channels.json
+      - ./data:/app/data
+    restart: unless-stopped
+    # Uncomment for NVIDIA NVENC:
+    # runtime: nvidia
+    # environment:
+    #   - NVIDIA_VISIBLE_DEVICES=all
 ```
 
 ---
@@ -171,6 +236,7 @@ plex-hls-tuner/
 3. Make channels hot-reloadable (no full restart needed)
 4. Create the basic Chrome extension skeleton that can talk to the companion
 5. Write setup instructions so anyone can get a working demo in < 10 minutes
+6. Add the multi-stage Dockerfile and docker-compose.yml
 
 ---
 
@@ -182,10 +248,12 @@ plex-hls-tuner/
 - [ ] Optional clean download to disk
 - [ ] Works on Windows, Linux, and macOS (Docker + native)
 - [ ] Clear documentation
+- [ ] One-command Docker deploy
 
 ---
 
 **Status**: Planning complete. Ready to start Phase 0/1.
 
 Created: 2026-07-11  
+Updated: 2026-07-11 (added Dockerfile section)  
 Owner: lquessenberry
