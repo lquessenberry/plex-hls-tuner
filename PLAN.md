@@ -141,24 +141,70 @@ These provide free movie/TV scraping + live free-to-air style sources (many use 
 | **Gratis Red**     | Free links focus                           | RED Repository                |
 | **POV / Red Light / Fen Light forks** | Advanced free/debrid scrapers         | Community                     |
 
-**Porting Strategy**  
-1. Reverse-engineer the Python scrapers / resolvers from the highest-value addons  
-2. Re-implement the useful parts as clean Go packages under `companion/internal/sources/` or `companion/adapters/`  
-3. Expose them as first-class channel providers that can be enabled/disabled and refreshed  
-4. Support both “live channel lists” and “on-demand movie/TV libraries” that can be turned into Plex Live TV channels or recorded
+#### Porting Strategy (Refined)
 
-**Priority for first ports**:  
-1. Cumination + AdultHideout (adult tubes)  
-2. The Crew + Scrubs V2 + Elementum (general free movies + live)  
-3. Free99 / Dream Machine / Magic Dragon as secondary packs
+We treat Kodi addons as valuable research and reverse-engineering targets, not as runtime dependencies. The goal is to extract the *intelligence* (how they find and resolve high-quality HLS streams) and re-implement it cleanly in Go.
 
-- [ ] Extract and document the source-fetching logic from top Kodi addons
-- [ ] Port core scrapers/resolvers into native Go packages
-- [ ] Create a clean “Source Provider” interface so new ports are easy to add
-- [ ] One-click enable / refresh of ported source libraries in the API / dashboard
-- [ ] Channel grouping & filtering (e.g. “Sports”, “News”, “International”, “Adult”, “Movies 24/7”)
-- [ ] Legal / ethical notes: only use publicly available free streams; respect ToS and rate limits; clearly mark adult sources
-- [ ] Documentation for porting additional Kodi addons
+**1. Discovery & Analysis Phase**
+- Install the target Kodi addon in a clean Kodi 21 Omega environment.
+- Use logging, network inspection (mitmproxy / Charles / browser DevTools), and source code review to map:
+  - How channel lists / search results are generated
+  - Which sites and APIs are called
+  - How individual video pages are resolved into final `.m3u8` URLs
+  - Cookie / header / user-agent requirements
+  - Any anti-bot or obfuscation techniques used
+- Document the flow for each major source site the addon supports.
+
+**2. Extraction of Core Logic**
+- Identify the reusable pieces:
+  - Site-specific scrapers / parsers
+  - HLS resolvers / extractors
+  - Quality / variant selectors
+  - Category / genre mapping
+  - Search and pagination logic
+- Discard pure Kodi UI, settings, and Python-specific boilerplate.
+
+**3. Native Re-implementation in Go**
+- Create a clean `SourceProvider` interface, for example:
+  ```go
+  type SourceProvider interface {
+      Name() string
+      Categories() []Category
+      Search(query string) ([]Item, error)
+      Resolve(item Item) (*Stream, error)  // returns m3u8 + headers
+      Refresh() error
+  }
+  ```
+- Implement each high-value source as a separate package under `companion/internal/sources/`.
+- Prefer well-structured, testable, concurrent-friendly Go code with proper error handling and rate limiting.
+- Support both:
+  - Live channel lists (ideal for Plex Live TV)
+  - On-demand libraries (movies/TV that can be exposed as pseudo-channels or recorded)
+
+**4. Integration & User Experience**
+- Each ported source appears as a first-class provider that can be enabled/disabled in config or via API.
+- One-click “Import / Refresh Source” that populates our channel database.
+- Automatic or scheduled refresh of channel lists.
+- Grouping, filtering, and adult-content warnings built in.
+- Clear attribution and legal notes in the UI/docs (we re-implemented the logic; we do not redistribute Kodi code).
+
+**5. Maintenance Philosophy**
+- When a source site breaks, we fix our Go port — we do not wait for the original Kodi addon to update.
+- Prioritize sources that are stable and produce reliable HLS streams.
+- Keep the number of first-class ports small and high-quality rather than trying to port everything.
+
+**Priority Order for First Ports**
+1. **Cumination** + **AdultHideout** → Adult tube libraries  
+2. **The Crew** + **Scrubs V2** + **Elementum** → General free movies / TV / live  
+3. Free99, Dream Machine, Magic Dragon → Secondary free packs
+
+**Checklist for each port**
+- [ ] Fully reverse-engineer the source sites used by the Kodi addon
+- [ ] Implement as a clean Go `SourceProvider`
+- [ ] Unit tests for scraping + resolution logic
+- [ ] Rate limiting + polite user-agent handling
+- [ ] Integration with channel manager + HDHomeRun emulator
+- [ ] Documentation in `docs/porting-kodi.md` and per-source notes
 
 **Success criteria**: User can enable a ported source (e.g. Cumination or Scrubs) and instantly get a large, high-quality set of channels/movies appear in Plex Live TV & DVR — all without Kodi installed.
 
@@ -324,5 +370,5 @@ services:
 **Status**: Planning complete. Ready to start Phase 0/1.
 
 Created: 2026-07-11  
-Updated: 2026-07-11 (Kodi sources will be **ported** natively into our app)  
+Updated: 2026-07-11 (refined Porting Strategy section)  
 Owner: lquessenberry
