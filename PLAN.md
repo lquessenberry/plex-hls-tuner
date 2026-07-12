@@ -6,6 +6,7 @@ This project combines:
 - A Chrome extension (HLS detection + easy "Add as Channel" workflow)
 - An enhanced version of [plex-dvr-hls](https://github.com/duncanleo/plex-dvr-hls) as the companion backend
 - Optional download-to-disk functionality (Video DownloadHelper style)
+- **Repurposed Kodi plugins** that already source large libraries of HLS streams (to massively expand available channels)
 
 ---
 
@@ -16,6 +17,7 @@ This project combines:
 3. The stream instantly appears as a channel inside Plex Live TV & DVR.
 4. Watch live, pause, and record with Plex DVR just like a real tuner.
 5. Optionally download the stream to disk as a clean MP4/MKV.
+6. **Import entire channel lineups** from popular Kodi IPTV/HLS plugins (sports, news, free-to-air, regional, etc.) so users get hundreds of channels with almost zero effort.
 
 ---
 
@@ -40,6 +42,7 @@ This project combines:
 │  • Cookie/header injection   │
 │  • Download queue            │
 │  • Optional DLNA server      │
+│  • Kodi plugin adapters      │  ← NEW
 └──────────────┬───────────────┘
                │ Port 5004 (HDHomeRun)
                ▼
@@ -102,7 +105,25 @@ This project combines:
 - [ ] Save location chooser + naming templates
 - [ ] Optional auto-add to a Plex movie library after download
 
-### Phase 4 – Polish & Advanced Features
+### Phase 4 – Kodi Plugin Source Libraries (Channel Expansion)
+**Target: Massively expand available channels by repurposing existing Kodi HLS/IPTV plugins**
+
+Many popular Kodi addons already do the hard work of discovering, scraping, and maintaining large lists of free/public HLS streams (news, sports, international free-to-air, 24/7 channels, etc.). We will reverse-engineer / adapt their source-fetching logic so our companion can import those channel lists directly.
+
+- [ ] Research and catalog high-value Kodi plugins that primarily source HLS streams
+  - Examples: sports streams, free-to-air TV, news networks, regional channels, 24/7 music/movie channels, etc.
+- [ ] Create adapter/plugin system inside the companion:
+  - Each adapter knows how to fetch + parse the channel list from a given Kodi plugin’s source (API, GitHub raw, M3U, JSON, etc.)
+  - Convert their output into our internal channel format (name, m3u8 URL, logo, group, headers if needed)
+- [ ] One-click “Import from Kodi Plugin” in the web dashboard / API
+- [ ] Support for automatic refresh of those source lists (scheduled or on-demand)
+- [ ] Channel grouping & filtering (e.g. “Sports”, “News”, “International”)
+- [ ] Legal / ethical notes: only use publicly available free streams; respect ToS and rate limits
+- [ ] Documentation for adding new Kodi plugin adapters
+
+**Success criteria**: User can import 50–500+ channels from popular Kodi sources with a single command and have them appear instantly in Plex Live TV.
+
+### Phase 5 – Polish & Advanced Features
 - [ ] Better EPG support (optional real XMLTV or simple scraper)
 - [ ] Temporary vs permanent channels
 - [ ] Channel groups / categories
@@ -113,12 +134,13 @@ This project combines:
 - [ ] Windows tray app / Electron wrapper (nice-to-have)
 - [ ] DLNA/UPnP server mode (bonus)
 
-### Phase 5 – Packaging & Distribution
+### Phase 6 – Packaging & Distribution
 - [ ] GitHub Releases with binaries (Windows, Linux, macOS)
 - [ ] Chrome Web Store listing (or sideload instructions)
 - [ ] Docker Hub / GHCR image
 - [ ] Documentation site or detailed wiki
 - [ ] Example configs for common free live streams
+- [ ] Pre-built channel packs from popular Kodi sources
 
 ---
 
@@ -129,6 +151,7 @@ This project combines:
 | Companion backend  | Go (fork of plex-dvr-hls) + REST API |
 | HLS processing     | ffmpeg (cpu / nvenc / vaapi / etc.) |
 | Channel storage    | JSON file or SQLite                 |
+| Kodi adapters      | Go packages that scrape/parse Kodi plugin sources |
 | Chrome Extension   | Manifest V3, TypeScript preferred   |
 | Communication      | Native Messaging or authenticated localhost |
 | Packaging          | Docker + GitHub Actions for multi-arch binaries |
@@ -146,6 +169,10 @@ plex-hls-tuner/
 │   ├── cmd/
 │   ├── internal/
 │   ├── api/                ← new REST endpoints
+│   ├── adapters/           ← Kodi plugin adapters (NEW)
+│   │   ├── sports/
+│   │   ├── news/
+│   │   └── ...
 │   ├── config/
 │   ├── templates/
 │   ├── Dockerfile          ← multi-stage Go + ffmpeg
@@ -158,6 +185,7 @@ plex-hls-tuner/
 ├── docs/
 │   ├── setup.md
 │   ├── api.md
+│   ├── kodi-adapters.md    ← how to add new source plugins
 │   └── development.md
 ├── docker-compose.yml
 ├── Dockerfile              ← (optional root-level for convenience)
@@ -237,6 +265,7 @@ services:
 4. Create the basic Chrome extension skeleton that can talk to the companion
 5. Write setup instructions so anyone can get a working demo in < 10 minutes
 6. Add the multi-stage Dockerfile and docker-compose.yml
+7. Begin research on high-value Kodi HLS plugins for Phase 4 adapters
 
 ---
 
@@ -249,11 +278,12 @@ services:
 - [ ] Works on Windows, Linux, and macOS (Docker + native)
 - [ ] Clear documentation
 - [ ] One-command Docker deploy
+- [ ] Import large channel packs from at least 2–3 popular Kodi plugin sources
 
 ---
 
 **Status**: Planning complete. Ready to start Phase 0/1.
 
 Created: 2026-07-11  
-Updated: 2026-07-11 (added Dockerfile section)  
+Updated: 2026-07-11 (added Dockerfile + Kodi plugin source expansion)  
 Owner: lquessenberry
