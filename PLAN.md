@@ -17,7 +17,7 @@ This project combines:
 3. The stream instantly appears as a channel inside Plex Live TV & DVR.
 4. Watch live, pause, and record with Plex DVR just like a real tuner.
 5. Optionally download the stream to disk as a clean MP4/MKV.
-6. **Import entire channel lineups** from popular Kodi IPTV/HLS plugins (sports, news, free-to-air, regional, etc.) so users get hundreds of channels with almost zero effort.
+6. **Import entire channel lineups** from popular Kodi IPTV/HLS plugins (sports, news, free-to-air, regional, adult tubes, free movie sources, etc.) so users get hundreds of channels with almost zero effort.
 
 ---
 
@@ -42,7 +42,7 @@ This project combines:
 │  • Cookie/header injection   │
 │  • Download queue            │
 │  • Optional DLNA server      │
-│  • Kodi plugin adapters      │  ← NEW
+│  • Kodi plugin adapters      │
 └──────────────┬───────────────┘
                │ Port 5004 (HDHomeRun)
                ▼
@@ -108,17 +108,52 @@ This project combines:
 ### Phase 4 – Kodi Plugin Source Libraries (Channel Expansion)
 **Target: Massively expand available channels by repurposing existing Kodi HLS/IPTV plugins**
 
-Many popular Kodi addons already do the hard work of discovering, scraping, and maintaining large lists of free/public HLS streams (news, sports, international free-to-air, 24/7 channels, etc.). We will reverse-engineer / adapt their source-fetching logic so our companion can import those channel lists directly.
+Many popular Kodi addons already do the hard work of discovering, scraping, and maintaining large lists of free/public HLS streams (news, sports, international free-to-air, 24/7 channels, adult tubes, free movie sources, etc.). We will reverse-engineer / adapt their source-fetching logic so our companion can import those channel lists directly.
+
+#### Curated High-Value Kodi Addons (as of July 2026)
+
+**Adult / Tube Streaming Sources (Whitecream-style & successors)**  
+These specialize in free adult tube sites, live cams, and large libraries of HLS streams:
+
+| Addon              | Notes                                      | Status / Repo                  |
+|--------------------|--------------------------------------------|--------------------------------|
+| **Cumination**     | Primary Whitecream clone/successor. Massive multi-site aggregator with excellent filtering | Actively recommended 2026     |
+| **AdultHideout**   | Very actively maintained (releases as recent as July 2026). Clean adult video addon | GitHub: Vashiel/repository.adulthideout |
+| **Area 69 X**      | Popular, broad content, straightforward    | SouthPaw / community repos    |
+| **Ultimate Whitecream** | Classic that still gets mentions           | Team Crew related             |
+| **XXX-O-DUS**      | Well organized by genre, VR support        | Community                     |
+| **FapZone**        | Frequently listed alongside Cumination     | Community                     |
+| **Ali ohh la la**  | Aliunde repository                         | Aliunde                       |
+
+**General Audience – Free Movies, TV, Tube-style & Live Streams**  
+These provide free movie/TV scraping + live free-to-air style sources (many use HLS):
+
+| Addon              | Notes                                      | Status / Repo                  |
+|--------------------|--------------------------------------------|--------------------------------|
+| **The Crew**       | Extremely popular all-in-one. Has movies, TV, live, and adult section | team-crew.github.io           |
+| **Scrubs V2**      | Excellent free movie/TV scraper, clean & reliable | jewbmx.github.io              |
+| **Elementum**      | Strong free torrent/HLS links              | Community                     |
+| **Umbrella**       | High quality (often debrid preferred but free options exist) | Community                     |
+| **Free99** (Diggz) | Free movies & TV                           | Diggz repository              |
+| **Dream Machine**  | Movies, TV, live streams, free M3U         | Community                     |
+| **The Magic Dragon**| Large library, free movies                 | narcacist.com/repo            |
+| **Ghost**          | All-in-one from Crew repo                  | Crew                          |
+| **Gratis Red**     | Free links focus                           | RED Repository                |
+| **POV / Red Light / Fen Light forks** | Advanced free/debrid scrapers         | Community                     |
+
+**Priority for Phase 4 adapters**:  
+1. Cumination + AdultHideout (adult tubes)  
+2. The Crew + Scrubs V2 + Elementum (general free movies + live)  
+3. Free99 / Dream Machine / Magic Dragon as secondary packs
 
 - [ ] Research and catalog high-value Kodi plugins that primarily source HLS streams
-  - Examples: sports streams, free-to-air TV, news networks, regional channels, 24/7 music/movie channels, etc.
 - [ ] Create adapter/plugin system inside the companion:
   - Each adapter knows how to fetch + parse the channel list from a given Kodi plugin’s source (API, GitHub raw, M3U, JSON, etc.)
   - Convert their output into our internal channel format (name, m3u8 URL, logo, group, headers if needed)
 - [ ] One-click “Import from Kodi Plugin” in the web dashboard / API
 - [ ] Support for automatic refresh of those source lists (scheduled or on-demand)
-- [ ] Channel grouping & filtering (e.g. “Sports”, “News”, “International”)
-- [ ] Legal / ethical notes: only use publicly available free streams; respect ToS and rate limits
+- [ ] Channel grouping & filtering (e.g. “Sports”, “News”, “International”, “Adult”, “Movies 24/7”)
+- [ ] Legal / ethical notes: only use publicly available free streams; respect ToS and rate limits; clearly mark adult sources
 - [ ] Documentation for adding new Kodi plugin adapters
 
 **Success criteria**: User can import 50–500+ channels from popular Kodi sources with a single command and have them appear instantly in Plex Live TV.
@@ -169,10 +204,10 @@ plex-hls-tuner/
 │   ├── cmd/
 │   ├── internal/
 │   ├── api/                ← new REST endpoints
-│   ├── adapters/           ← Kodi plugin adapters (NEW)
-│   │   ├── sports/
-│   │   ├── news/
-│   │   └── ...
+│   ├── adapters/           ← Kodi plugin adapters
+│   │   ├── adult/          ← Cumination, AdultHideout, etc.
+│   │   ├── movies/         ← Scrubs, The Crew, Free99, etc.
+│   │   └── live/           ← free-to-air / tube style
 │   ├── config/
 │   ├── templates/
 │   ├── Dockerfile          ← multi-stage Go + ffmpeg
@@ -265,7 +300,7 @@ services:
 4. Create the basic Chrome extension skeleton that can talk to the companion
 5. Write setup instructions so anyone can get a working demo in < 10 minutes
 6. Add the multi-stage Dockerfile and docker-compose.yml
-7. Begin research on high-value Kodi HLS plugins for Phase 4 adapters
+7. Begin research on high-value Kodi HLS plugins for Phase 4 adapters (start with Cumination, AdultHideout, The Crew, Scrubs V2)
 
 ---
 
@@ -278,12 +313,12 @@ services:
 - [ ] Works on Windows, Linux, and macOS (Docker + native)
 - [ ] Clear documentation
 - [ ] One-command Docker deploy
-- [ ] Import large channel packs from at least 2–3 popular Kodi plugin sources
+- [ ] Import large channel packs from at least 2–3 popular Kodi plugin sources (adult + general)
 
 ---
 
 **Status**: Planning complete. Ready to start Phase 0/1.
 
 Created: 2026-07-11  
-Updated: 2026-07-11 (added Dockerfile + Kodi plugin source expansion)  
+Updated: 2026-07-11 (added Dockerfile + Kodi plugin source expansion + curated addon list)  
 Owner: lquessenberry
